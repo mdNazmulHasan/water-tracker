@@ -32,3 +32,9 @@ test('recommendedGoalMl scales with weight and activity', () => {
   expect(sedentary).toBeGreaterThan(0);
   expect(active).toBeGreaterThan(sedentary);
 });
+
+test('recommendedGoalMl is lower for female than male', () => {
+  const female = recommendedGoalMl(70, 'light', 'female');
+  const male = recommendedGoalMl(70, 'light', 'male');
+  expect(female).toBeLessThan(male);
+});

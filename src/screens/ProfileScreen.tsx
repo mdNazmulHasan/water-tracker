@@ -11,6 +11,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import {
   ACTIVITY_OPTIONS,
+  GENDER_OPTIONS,
+  setGender,
   setWeight,
   setActivityLevel,
   setWakeTime,
@@ -39,7 +41,11 @@ export default function ProfileScreen() {
   }, [profile.weightKg]);
 
   const handleWeightChange = (text: string) => {
-    const cleaned = text.replace(/[^0-9.]/g, '');
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = `${parts[0]}.${parts.slice(1).join('')}`;
+    }
     setWeightText(cleaned);
 
     const parsed = parseFloat(cleaned);
@@ -48,7 +54,11 @@ export default function ProfileScreen() {
     }
   };
 
-  const recommended = recommendedGoalMl(profile.weightKg, profile.activityLevel);
+  const recommended = recommendedGoalMl(
+    profile.weightKg,
+    profile.activityLevel,
+    profile.gender,
+  );
 
   return (
     <ScrollView
@@ -57,8 +67,33 @@ export default function ProfileScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Card style={styles.card}>
+      <Card>
         <Text style={styles.cardTitle}>Body</Text>
+
+        <Text style={styles.fieldLabel}>Gender</Text>
+        <View style={styles.activityRow}>
+          {GENDER_OPTIONS.map((opt) => {
+            const active = profile.gender === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                accessibilityRole="button"
+                accessibilityLabel={`Gender ${opt.label}`}
+                style={[styles.activityChip, active && styles.activityChipActive]}
+                onPress={() => dispatch(setGender(opt.value))}
+              >
+                <Text
+                  style={[
+                    styles.activityText,
+                    active && styles.activityTextActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         <Text style={styles.fieldLabel}>Weight (kg)</Text>
         <TextInput
@@ -119,7 +154,7 @@ export default function ProfileScreen() {
         <Text style={styles.goalSub}>
           {profile.customGoal
             ? 'Custom goal'
-            : `Recommended for your weight & activity (${liters(recommended)}L)`}
+            : `Recommended for your weight, gender & activity (${liters(recommended)}L)`}
         </Text>
 
         <View style={styles.goalControls}>

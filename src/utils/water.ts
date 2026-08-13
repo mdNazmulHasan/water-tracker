@@ -1,4 +1,4 @@
-import { ActivityLevel } from '../store/slices/profile';
+import { ActivityLevel, Gender } from '../store/slices/profile';
 import { IntakeEntry } from '../store/slices/hydration';
 import { totalForDay } from './date';
 
@@ -10,12 +10,23 @@ const ACTIVITY_MULTIPLIER: Record<ActivityLevel, number> = {
   veryActive: 1.35,
 };
 
+const GENDER_MULTIPLIER: Record<Gender, number> = {
+  female: 0.85,
+  male: 1.0,
+};
+
 export function roundTo50(ml: number): number {
   return Math.max(500, Math.round(ml / 50) * 50);
 }
 
-export function recommendedGoalMl(weightKg: number, activity: ActivityLevel): number {
-  return roundTo50(weightKg * 35 * ACTIVITY_MULTIPLIER[activity]);
+export function recommendedGoalMl(
+  weightKg: number,
+  activity: ActivityLevel,
+  gender: Gender = 'female',
+): number {
+  return roundTo50(
+    weightKg * 35 * ACTIVITY_MULTIPLIER[activity] * GENDER_MULTIPLIER[gender],
+  );
 }
 
 export function pct(consumed: number, goal: number): number {

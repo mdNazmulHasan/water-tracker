@@ -16,7 +16,15 @@ export const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string }[] = [
   { value: 'veryActive', label: 'Athlete' },
 ];
 
+export type Gender = 'male' | 'female';
+
+export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+];
+
 export interface ProfileState {
+  gender: Gender;
   weightKg: number;
   activityLevel: ActivityLevel;
   wakeTime: string;
@@ -26,17 +34,22 @@ export interface ProfileState {
 }
 
 const initialState: ProfileState = {
+  gender: 'female',
   weightKg: 70,
   activityLevel: 'light',
   wakeTime: '07:00',
   sleepTime: '23:00',
-  dailyGoalMl: recommendedGoalMl(70, 'light'),
+  dailyGoalMl: recommendedGoalMl(70, 'light', 'female'),
   customGoal: false,
 };
 
 function applyRecommended(state: ProfileState) {
   if (!state.customGoal) {
-    state.dailyGoalMl = recommendedGoalMl(state.weightKg, state.activityLevel);
+    state.dailyGoalMl = recommendedGoalMl(
+      state.weightKg,
+      state.activityLevel,
+      state.gender,
+    );
   }
 }
 
@@ -44,6 +57,10 @@ const profileSlice = createSlice({
   name: 'profile',
   initialState,
   reducers: {
+    setGender(state, action: PayloadAction<Gender>) {
+      state.gender = action.payload;
+      applyRecommended(state);
+    },
     setWeight(state, action: PayloadAction<number>) {
       state.weightKg = action.payload;
       applyRecommended(state);
@@ -70,6 +87,7 @@ const profileSlice = createSlice({
 });
 
 export const {
+  setGender,
   setWeight,
   setActivityLevel,
   setWakeTime,
