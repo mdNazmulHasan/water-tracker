@@ -16,6 +16,7 @@ async function ensureChannel(): Promise<string> {
     id: CHANNEL_ID,
     name: 'Water reminders',
     importance: AndroidImportance.HIGH,
+    sound: 'default',
   });
   return channelId;
 }
@@ -59,6 +60,7 @@ export async function syncReminders(reminders: RemindersState): Promise<void> {
           title: 'Time to hydrate',
           body: 'Take a sip — every drop counts.',
           android: { channelId },
+          ios: { sound: 'default' },
         },
         trigger,
       );
