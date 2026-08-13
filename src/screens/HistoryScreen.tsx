@@ -1,14 +1,21 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
 import { RootState } from '../store';
-import { removeIntake } from '../store/slices/hydration';
-import { colors, spacing, typography } from '../theme';
+import { IntakeEntry, removeIntake, updateIntake } from '../store/slices/hydration';
+import { colors, radius, spacing, typography } from '../theme';
 import Card from '../components/Card';
 import SegmentedControl from '../components/SegmentedControl';
 import BarChart, { BarDatum } from '../components/BarChart';
-import { lastNDayKeys, totalForDay } from '../utils/date';
+import { EditIcon } from '../components/icons';
+import {
+  entriesByDay,
+  formatClock,
+  lastNDayKeys,
+  todayKey,
+  totalForDay,
+} from '../utils/date';
 import { liters } from '../utils/water';
 
 type Period = 'today' | 'week' | 'month';
@@ -24,26 +31,52 @@ export default function HistoryScreen() {
   const entries = useSelector((s: RootState) => s.hydration.entries);
   const goal = useSelector((s: RootState) => s.profile.dailyGoalMl);
   const [period, setPeriod] = useState<Period>('today');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmountText, setEditAmountText] = useState<string>('');
 
-  const byDay = useMemo(() => {
-    const map: Record<string, typeof entries> = {};
-    for (const e of entries) {
-      const k = dayjs(e.timestamp).format('YYYY-MM-DD');
-      if (!map[k]) map[k] = [];
-      map[k].push(e);
+  const byDay = useMemo(() => entriesByDay(entries), [entries]);
+
+  const currentTodayKey = todayKey();
+  const todayEntries = useMemo(
+    () => byDay[currentTodayKey] ?? [],
+    [byDay, currentTodayKey]
+  );
+
+  const sortedTodayEntries = useMemo(
+    () => [...todayEntries].sort((a, b) => b.timestamp - a.timestamp),
+    [todayEntries]
+  );
+
+  const handleStartEdit = (entry: IntakeEntry) => {
+    setEditingId(entry.id);
+    setEditAmountText(String(entry.amount));
+  };
+
+  const handleSaveEdit = (id: string) => {
+    const parsed = parseInt(editAmountText, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      dispatch(updateIntake({ id, amount: parsed }));
     }
-    return map;
-  }, [entries]);
+    setEditingId(null);
+  };
 
-  const todayKey = dayjs().format('YYYY-MM-DD');
-  const todayEntries = useMemo(() => byDay[todayKey] ?? [], [byDay, todayKey]);
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
 
   const hourlyData = useMemo<BarDatum[]>(() => {
     const hours = new Map<number, number>();
-    for (const e of todayEntries) hours.set(dayjs(e.timestamp).hour(), (hours.get(dayjs(e.timestamp).hour()) ?? 0) + e.amount);
+    for (const e of todayEntries)
+      hours.set(
+        dayjs(e.timestamp).hour(),
+        (hours.get(dayjs(e.timestamp).hour()) ?? 0) + e.amount
+      );
     const data: BarDatum[] = [];
     for (let h = 0; h < 24; h++) {
-      data.push({ value: hours.get(h) ?? 0, label: `${String(h).padStart(2, '0')}` });
+      data.push({
+        value: hours.get(h) ?? 0,
+        label: `${String(h).padStart(2, '0')}`,
+      });
     }
     return data;
   }, [todayEntries]);
@@ -93,35 +126,85 @@ export default function HistoryScreen() {
                 data={hourlyData}
                 goal={goal / 24}
                 height={140}
-                formatValue={(v) => (v > 0 ? `${(v / 1000).toFixed(1)}L` : '')}
+                formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
               />
             </View>
           </Card>
 
           <Card style={styles.card}>
             <Text style={styles.cardTitle}>Timeline</Text>
-            {todayEntries.length === 0 ? (
+            {sortedTodayEntries.length === 0 ? (
               <Text style={styles.emptyText}>
                 No drinks logged yet today. Start from the Home tab!
               </Text>
             ) : (
-              [...todayEntries]
-                .sort((a, b) => b.timestamp - a.timestamp)
-                .map((e) => (
+              sortedTodayEntries.map((e) => {
+                const isEditing = editingId === e.id;
+                if (isEditing) {
+                  return (
+                    <View key={e.id} style={styles.editRow}>
+                      <Text style={styles.timelineTime}>
+                        {formatClock(e.timestamp)}
+                      </Text>
+                      <TextInput
+                        style={styles.editInput}
+                        value={editAmountText}
+                        onChangeText={setEditAmountText}
+                        keyboardType="number-pad"
+                        autoFocus
+                        selectTextOnFocus
+                      />
+                      <Text style={styles.editUnit}>ml</Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Save edit"
+                        style={styles.saveBtn}
+                        onPress={() => handleSaveEdit(e.id)}
+                      >
+                        <Text style={styles.saveBtnText}>Save</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Cancel edit"
+                        style={styles.cancelBtn}
+                        onPress={handleCancelEdit}
+                      >
+                        <Text style={styles.cancelBtnText}>Cancel</Text>
+                      </Pressable>
+                    </View>
+                  );
+                }
+
+                return (
                   <View key={e.id} style={styles.timelineRow}>
                     <View style={styles.timelineDot} />
                     <Text style={styles.timelineTime}>
-                      {dayjs(e.timestamp).format('HH:mm')}
+                      {formatClock(e.timestamp)}
                     </Text>
                     <Text style={styles.timelineAmount}>+{e.amount} ml</Text>
-                    <Text
-                      style={styles.timelineDelete}
-                      onPress={() => dispatch(removeIntake(e.id))}
-                    >
-                      ×
-                    </Text>
+                    <View style={styles.actionButtons}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit entry"
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        onPress={() => handleStartEdit(e)}
+                        style={styles.actionBtn}
+                      >
+                        <EditIcon size={16} color={colors.textSecondary} />
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Delete entry"
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        onPress={() => dispatch(removeIntake(e.id))}
+                        style={styles.actionBtn}
+                      >
+                        <Text style={styles.timelineDelete}>×</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                ))
+                );
+              })
             )}
           </Card>
         </>
@@ -150,7 +233,7 @@ export default function HistoryScreen() {
               goal={goal}
               height={170}
               highlightIndex={6}
-              formatValue={(v) => (v > 0 ? `${Math.round(v / 100) / 10}L` : '')}
+              formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
             />
           </View>
         </Card>
@@ -181,7 +264,7 @@ export default function HistoryScreen() {
               goal={goal}
               height={190}
               highlightIndex={29}
-              formatValue={(v) => (v > 0 ? `${Math.round(v / 100) / 10}L` : '')}
+              formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
             />
           </View>
         </Card>
@@ -266,10 +349,62 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  actionBtn: {
+    paddingHorizontal: 4,
+  },
   timelineDelete: {
     fontSize: 22,
     color: colors.textMuted,
+    paddingHorizontal: spacing.xs,
+  },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  editInput: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    minWidth: 60,
+    textAlign: 'center',
+    marginHorizontal: spacing.xs,
+  },
+  editUnit: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginRight: spacing.sm,
+  },
+  saveBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    marginRight: spacing.xs,
+  },
+  saveBtnText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cancelBtn: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 4,
+  },
+  cancelBtnText: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   emptyText: {
     fontSize: 14,

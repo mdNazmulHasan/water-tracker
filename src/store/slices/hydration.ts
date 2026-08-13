@@ -39,6 +39,20 @@ const hydrationSlice = createSlice({
     removeIntake(state, action: PayloadAction<string>) {
       state.entries = state.entries.filter((e) => e.id !== action.payload);
     },
+    updateIntake(
+      state,
+      action: PayloadAction<{ id: string; amount?: number; timestamp?: number }>
+    ) {
+      const entry = state.entries.find((e) => e.id === action.payload.id);
+      if (entry) {
+        if (action.payload.amount !== undefined) {
+          entry.amount = action.payload.amount;
+        }
+        if (action.payload.timestamp !== undefined) {
+          entry.timestamp = action.payload.timestamp;
+        }
+      }
+    },
     clearDay(state, action: PayloadAction<string>) {
       const prefix = `${action.payload}T00:00:00`;
       const next = new Date(prefix).getTime();
@@ -50,6 +64,6 @@ const hydrationSlice = createSlice({
   },
 });
 
-export const { addIntake, addIntakeAt, removeIntake, clearDay } =
+export const { addIntake, addIntakeAt, removeIntake, updateIntake, clearDay } =
   hydrationSlice.actions;
 export default hydrationSlice.reducer;
