@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -17,18 +17,36 @@ import {
   setSleepTime,
   setDailyGoal,
   applyRecommendedGoal,
-  ActivityLevel,
 } from '../store/slices/profile';
 import { colors, radius, spacing, typography } from '../theme';
 import Card from '../components/Card';
 import TimePicker from '../components/TimePicker';
 import { recommendedGoalMl, liters } from '../utils/water';
 
-const GOAL_STEP = 100;
+const GOAL_STEP_ML = 100;
+const MIN_GOAL_ML = 500;
+const MAX_GOAL_ML = 6000;
+const MAX_WEIGHT_KG = 300;
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
   const profile = useSelector((s: RootState) => s.profile);
+
+  const [weightText, setWeightText] = useState(String(profile.weightKg));
+
+  useEffect(() => {
+    setWeightText(String(profile.weightKg));
+  }, [profile.weightKg]);
+
+  const handleWeightChange = (text: string) => {
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    setWeightText(cleaned);
+
+    const parsed = parseFloat(cleaned);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      dispatch(setWeight(Math.min(MAX_WEIGHT_KG, parsed)));
+    }
+  };
 
   const recommended = recommendedGoalMl(profile.weightKg, profile.activityLevel);
 
@@ -37,6 +55,7 @@ export default function ProfileScreen() {
       style={styles.screen}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Body</Text>
@@ -44,12 +63,9 @@ export default function ProfileScreen() {
         <Text style={styles.fieldLabel}>Weight (kg)</Text>
         <TextInput
           style={styles.input}
-          value={String(profile.weightKg)}
-          keyboardType="numeric"
-          onChangeText={(t) => {
-            const n = Number(t.replace(/[^0-9.]/g, ''));
-            if (t !== '' && !Number.isNaN(n) && n > 0) dispatch(setWeight(Math.min(300, n)));
-          }}
+          value={weightText}
+          keyboardType="decimal-pad"
+          onChangeText={handleWeightChange}
           placeholder="70"
           placeholderTextColor={colors.textMuted}
         />
@@ -61,8 +77,10 @@ export default function ProfileScreen() {
             return (
               <Pressable
                 key={opt.value}
+                accessibilityRole="button"
+                accessibilityLabel={`Activity level ${opt.label}`}
                 style={[styles.activityChip, active && styles.activityChipActive]}
-                onPress={() => dispatch(setActivityLevel(opt.value as ActivityLevel))}
+                onPress={() => dispatch(setActivityLevel(opt.value))}
               >
                 <Text
                   style={[
@@ -106,17 +124,25 @@ export default function ProfileScreen() {
 
         <View style={styles.goalControls}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Decrease daily goal"
             style={styles.stepButton}
             onPress={() =>
-              dispatch(setDailyGoal(Math.max(500, profile.dailyGoalMl - GOAL_STEP)))
+              dispatch(
+                setDailyGoal(Math.max(MIN_GOAL_ML, profile.dailyGoalMl - GOAL_STEP_ML))
+              )
             }
           >
             <Text style={styles.stepButtonText}>−</Text>
           </Pressable>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Increase daily goal"
             style={styles.stepButton}
             onPress={() =>
-              dispatch(setDailyGoal(Math.min(6000, profile.dailyGoalMl + GOAL_STEP)))
+              dispatch(
+                setDailyGoal(Math.min(MAX_GOAL_ML, profile.dailyGoalMl + GOAL_STEP_ML))
+              )
             }
           >
             <Text style={styles.stepButtonText}>+</Text>
@@ -125,6 +151,8 @@ export default function ProfileScreen() {
 
         {profile.customGoal && (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Use recommended daily goal"
             style={styles.recommendedButton}
             onPress={() => dispatch(applyRecommendedGoal())}
           >
