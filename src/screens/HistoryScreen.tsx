@@ -16,6 +16,7 @@ import { colors, radius, spacing, typography } from '../theme';
 import Card from '../components/Card';
 import SegmentedControl from '../components/SegmentedControl';
 import BarChart, { BarDatum } from '../components/BarChart';
+import TimePicker from '../components/TimePicker';
 import { EditIcon } from '../components/icons';
 import {
   entriesByDay,
@@ -41,6 +42,7 @@ export default function HistoryScreen() {
   const [period, setPeriod] = useState<Period>('today');
   const [editingEntry, setEditingEntry] = useState<IntakeEntry | null>(null);
   const [editAmountText, setEditAmountText] = useState<string>('');
+  const [editTime, setEditTime] = useState<string>('00:00');
 
   const byDay = useMemo(() => entriesByDay(entries), [entries]);
 
@@ -58,13 +60,27 @@ export default function HistoryScreen() {
   const handleStartEdit = (entry: IntakeEntry) => {
     setEditingEntry(entry);
     setEditAmountText(String(entry.amount));
+    setEditTime(dayjs(entry.timestamp).format('HH:mm'));
   };
 
   const handleSaveEdit = () => {
     if (!editingEntry) return;
     const parsed = parseInt(editAmountText, 10);
     if (!isNaN(parsed) && parsed > 0) {
-      dispatch(updateIntake({ id: editingEntry.id, amount: parsed }));
+      const [h, m] = editTime.split(':').map(Number);
+      const updatedTimestamp = dayjs(editingEntry.timestamp)
+        .hour(h ?? 0)
+        .minute(m ?? 0)
+        .second(0)
+        .millisecond(0)
+        .valueOf();
+      dispatch(
+        updateIntake({
+          id: editingEntry.id,
+          amount: parsed,
+          timestamp: updatedTimestamp,
+        })
+      );
     }
     setEditingEntry(null);
   };
@@ -255,22 +271,30 @@ export default function HistoryScreen() {
         <Pressable style={styles.modalOverlay} onPress={handleCancelEdit}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Edit Drink</Text>
-            {editingEntry && (
-              <Text style={styles.modalSubtitle}>
-                Logged at {formatClock(editingEntry.timestamp)}
-              </Text>
-            )}
+            <Text style={styles.modalSubtitle}>
+              Update drink amount or time
+            </Text>
 
-            <View style={styles.modalInputRow}>
-              <TextInput
-                style={styles.modalInput}
-                value={editAmountText}
-                onChangeText={setEditAmountText}
-                keyboardType="number-pad"
-                autoFocus
-                selectTextOnFocus
-              />
-              <Text style={styles.modalUnit}>ml</Text>
+            <View style={styles.modalFieldGroup}>
+              <Text style={styles.modalFieldLabel}>Amount</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={editAmountText}
+                  onChangeText={setEditAmountText}
+                  keyboardType="number-pad"
+                  autoFocus
+                  selectTextOnFocus
+                />
+                <Text style={styles.modalUnit}>ml</Text>
+              </View>
+            </View>
+
+            <View style={styles.modalFieldGroup}>
+              <Text style={styles.modalFieldLabel}>Time</Text>
+              <View style={styles.timePickerContainer}>
+                <TimePicker value={editTime} onChange={setEditTime} />
+              </View>
             </View>
 
             <View style={styles.modalButtonsRow}>
@@ -425,11 +449,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: spacing.md,
   },
+  modalFieldGroup: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalFieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   modalInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
   },
   modalInput: {
     backgroundColor: colors.surfaceAlt,
@@ -450,10 +486,15 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginLeft: spacing.sm,
   },
+  timePickerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   modalButtonsRow: {
     flexDirection: 'row',
     gap: spacing.md,
     width: '100%',
+    marginTop: spacing.sm,
   },
   modalCancelBtn: {
     flex: 1,

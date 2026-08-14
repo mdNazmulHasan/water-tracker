@@ -149,35 +149,36 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        <View style={styles.presetRow}>
-          {PRESET_AMOUNTS.map((amount) => (
-            <Pressable
-              key={amount}
-              style={({ pressed }) => [
-                styles.presetButton,
-                pressed && styles.presetButtonPressed,
-              ]}
-              onPress={() => add(amount)}
-              accessibilityRole="button"
-              accessibilityLabel={`Add ${amount} ml of water`}
-              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-            >
-              <Text style={styles.presetText}>+{amount}</Text>
-            </Pressable>
-          ))}
+        <View style={styles.presetSection}>
+          <View style={styles.presetRow}>
+            {PRESET_AMOUNTS.map((amount) => (
+              <Pressable
+                key={amount}
+                style={({ pressed }) => [
+                  styles.presetButton,
+                  pressed && styles.presetButtonPressed,
+                ]}
+                onPress={() => add(amount)}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${amount} ml of water`}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Text style={styles.presetText}>+{amount} ml</Text>
+              </Pressable>
+            ))}
+          </View>
           <Pressable
             style={({ pressed }) => [
-              styles.presetButton,
-              styles.customPresetButton,
+              styles.customWideButton,
               pressed && styles.presetButtonPressed,
             ]}
             onPress={openCustomModal}
             accessibilityRole="button"
             accessibilityLabel="Add custom water amount and time"
-            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <PlusIcon size={14} color={colors.primaryDark} />
-            <Text style={styles.presetText}>Custom</Text>
+            <PlusIcon size={16} color={colors.primary} />
+            <Text style={styles.customWideButtonText}>Custom amount & time</Text>
           </Pressable>
         </View>
 
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
   quickRow: {
     flexDirection: 'row',
     gap: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   quickButton: {
     flex: 1,
@@ -367,31 +368,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  presetSection: {
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
   presetRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    justifyContent: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
   },
   presetButton: {
+    flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadow.card,
   },
   presetButtonPressed: {
     opacity: 0.7,
     backgroundColor: colors.primarySoft,
   },
   presetText: {
-    color: colors.primaryDark,
+    color: colors.text,
     fontWeight: '600',
     fontSize: 13,
   },
+  customWideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: colors.primarySoft,
+    borderStyle: 'dashed',
+    gap: 6,
+    ...shadow.card,
+  },
+  customWideButtonText: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
   reminderCard: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   reminderRow: {
     flexDirection: 'row',
@@ -418,13 +443,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
-  },
-  customPresetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderColor: colors.primary,
-    backgroundColor: colors.surfaceAlt,
   },
   modalOverlay: {
     flex: 1,
