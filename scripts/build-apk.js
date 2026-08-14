@@ -71,15 +71,25 @@ if (fs.existsSync(pbxprojPath)) {
   console.log(`Updated iOS MARKETING_VERSION to ${newVersion} and CURRENT_PROJECT_VERSION to ${newVersionCode}`);
 }
 
-// 5. Build Android Release APK
-console.log(`\nBuilding Android Release APK for v${newVersion}...`);
+// 5. Delete previous APK files in root directory
 const rootDir = path.resolve(__dirname, '..');
+const existingFiles = fs.readdirSync(rootDir);
+for (const file of existingFiles) {
+  if (file.endsWith('.apk')) {
+    const fullPath = path.resolve(rootDir, file);
+    fs.unlinkSync(fullPath);
+    console.log(`Deleted previous APK: ${file}`);
+  }
+}
+
+// 6. Build Android Release APK
+console.log(`\nBuilding Android Release APK for v${newVersion}...`);
 execSync(
   'rm -rf android/app/src/main/assets/index.android.bundle android/app/src/main/assets/index.android.bundle.meta && cd android && ./gradlew clean assembleRelease && cd ..',
   { cwd: rootDir, stdio: 'inherit' }
 );
 
-// 6. Copy and name the APK
+// 7. Copy and name the APK
 const srcApk = path.resolve(rootDir, 'android/app/build/outputs/apk/release/app-release.apk');
 const destApkName = `WaterTracker-v${newVersion}.apk`;
 const destApkPath = path.resolve(rootDir, destApkName);
@@ -95,3 +105,4 @@ if (fs.existsSync(srcApk)) {
   console.error(`\n❌ Error: Release APK not found at ${srcApk}`);
   process.exit(1);
 }
+
