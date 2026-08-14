@@ -1,4 +1,4 @@
-import { clampTime, minutesToTime, timeToMinutes } from '../src/utils/date';
+import { clampTime, formatClock, formatTime12, formatTimeRange, minutesToTime, timeToMinutes } from '../src/utils/date';
 import { computeSchedule } from '../src/utils/schedule';
 
 describe('Time utils & Reminders boundary logic', () => {
@@ -12,6 +12,14 @@ describe('Time utils & Reminders boundary logic', () => {
     expect(minutesToTime(0)).toBe('00:00');
     expect(minutesToTime(450)).toBe('07:30');
     expect(minutesToTime(1439)).toBe('23:59');
+  });
+
+  test('formatTime12 and formatTimeRange format times into 12-hour AM/PM format', () => {
+    expect(formatTime12('00:00')).toBe('12:00 AM');
+    expect(formatTime12('07:30')).toBe('7:30 AM');
+    expect(formatTime12('12:00')).toBe('12:00 PM');
+    expect(formatTime12('23:30')).toBe('11:30 PM');
+    expect(formatTimeRange('08:00', '22:00')).toBe('8:00 AM – 10:00 PM');
   });
 
   test('clampTime restricts times to within min and max boundaries', () => {
@@ -40,3 +48,4 @@ describe('Time utils & Reminders boundary logic', () => {
     );
   });
 });
+

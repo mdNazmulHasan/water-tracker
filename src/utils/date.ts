@@ -24,12 +24,20 @@ export function isYesterday(key: DateKey): boolean {
 }
 
 export function formatClock(date: number | Date): string {
-  return dayjs(date).format('HH:mm');
+  return dayjs(date).format('h:mm A');
+}
+
+export function formatTime12(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h ?? 0, m ?? 0, 0, 0);
+  return dayjs(d).format('h:mm A');
 }
 
 export function formatTimeRange(start: string, end: string): string {
-  return `${start} – ${end}`;
+  return `${formatTime12(start)} – ${formatTime12(end)}`;
 }
+
 
 export function minutesToLabel(min: number): string {
   if (min < 60) return `${min} min`;

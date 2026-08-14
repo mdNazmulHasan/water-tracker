@@ -13,6 +13,8 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { colors, radius, spacing } from '../theme';
 
+import { formatTime12 } from '../utils/date';
+
 interface TimePickerProps {
   value: string;
   onChange: (time: string) => void;
@@ -68,7 +70,7 @@ export default function TimePicker({ value, onChange }: TimePickerProps) {
         }}
         activeOpacity={0.7}
       >
-        <Text style={styles.text}>{value}</Text>
+        <Text style={styles.text}>{formatTime12(value)}</Text>
       </TouchableOpacity>
 
       {Platform.OS === 'ios' ? (

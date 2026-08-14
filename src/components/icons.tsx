@@ -154,3 +154,17 @@ export function EditIcon({ size = 18, color = '#5B6B84' }: IconProps) {
     </Svg>
   );
 }
+
+export function PlusIcon({ size = 18, color = '#5B6B84' }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 5v14M5 12h14"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}

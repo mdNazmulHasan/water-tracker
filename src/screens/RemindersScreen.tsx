@@ -23,7 +23,7 @@ import { colors, radius, spacing, typography } from '../theme';
 import Card from '../components/Card';
 import AppSwitch from '../components/AppSwitch';
 import TimePicker from '../components/TimePicker';
-import { clampTime, minutesToLabel, timeToMinutes } from '../utils/date';
+import { clampTime, formatTime12, minutesToLabel, timeToMinutes } from '../utils/date';
 
 export default function RemindersScreen() {
   const dispatch = useDispatch();
@@ -93,7 +93,7 @@ export default function RemindersScreen() {
     if (targetMin < minMin) {
       Alert.alert(
         'Time outside range',
-        `Start time cannot be earlier than your wake time (${profile.wakeTime}).`,
+        `Start time cannot be earlier than your wake time (${formatTime12(profile.wakeTime)}).`,
       );
       dispatch(setStartTime(profile.wakeTime));
     } else if (targetMin > maxMin) {
@@ -103,7 +103,7 @@ export default function RemindersScreen() {
           : profile.sleepTime;
       Alert.alert(
         'Time outside range',
-        `Start time cannot be after ${boundary}.`,
+        `Start time cannot be after ${formatTime12(boundary)}.`,
       );
       dispatch(setStartTime(boundary));
     } else {
@@ -122,7 +122,7 @@ export default function RemindersScreen() {
     if (targetMin > maxMin) {
       Alert.alert(
         'Time outside range',
-        `End time cannot be later than your sleep time (${profile.sleepTime}).`,
+        `End time cannot be later than your sleep time (${formatTime12(profile.sleepTime)}).`,
       );
       dispatch(setEndTime(profile.sleepTime));
     } else if (targetMin < minMin) {
@@ -132,7 +132,7 @@ export default function RemindersScreen() {
           : profile.wakeTime;
       Alert.alert(
         'Time outside range',
-        `End time cannot be before ${boundary}.`,
+        `End time cannot be before ${formatTime12(boundary)}.`,
       );
       dispatch(setEndTime(boundary));
     } else {
@@ -169,7 +169,7 @@ export default function RemindersScreen() {
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Schedule</Text>
         <Text style={styles.rowNote}>
-          Range: Wake ({profile.wakeTime}) – Sleep ({profile.sleepTime})
+          Range: Wake ({formatTime12(profile.wakeTime)}) – Sleep ({formatTime12(profile.sleepTime)})
         </Text>
         <View style={styles.timesRow}>
           <View style={styles.timeColumn}>
@@ -229,7 +229,7 @@ export default function RemindersScreen() {
           <View style={styles.chipWrap}>
             {schedule.map((t) => (
               <View key={t} style={styles.timeChip}>
-                <Text style={styles.timeChipText}>{t}</Text>
+                <Text style={styles.timeChipText}>{formatTime12(t)}</Text>
               </View>
             ))}
           </View>

@@ -1,17 +1,26 @@
-import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { RootState } from '../store';
-import { addIntake, removeIntake } from '../store/slices/hydration';
+import { addIntake, addIntakeAt, removeIntake } from '../store/slices/hydration';
 import { computeSchedule, nextReminderAt } from '../utils/schedule';
 import { colors, radius, shadow, spacing, typography } from '../theme';
 import ProgressRing from '../components/ProgressRing';
 import Card from '../components/Card';
-import { DropIcon, BellIcon, UndoIcon } from '../components/icons';
+import TimePicker from '../components/TimePicker';
+import { DropIcon, BellIcon, UndoIcon, PlusIcon } from '../components/icons';
 import { pct, liters } from '../utils/water';
-import { minutesToLabel } from '../utils/date';
+import { formatTime12, formatTimeRange, minutesToLabel } from '../utils/date';
 import { TabNavigation } from '../navigation/types';
 
 const QUICK_ADD = [250, 500];
@@ -23,6 +32,10 @@ export default function HomeScreen() {
   const entries = useSelector((s: RootState) => s.hydration.entries);
   const goal = useSelector((s: RootState) => s.profile.dailyGoalMl);
   const reminders = useSelector((s: RootState) => s.reminders);
+
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [customAmount, setCustomAmount] = useState('250');
+  const [customTime, setCustomTime] = useState(() => dayjs().format('HH:mm'));
 
   const today = useMemo(() => {
     const now = dayjs();
@@ -51,115 +64,213 @@ export default function HomeScreen() {
   const add = (amount: number) => dispatch(addIntake(amount));
   const undo = () => lastEntry && dispatch(removeIntake(lastEntry.id));
 
+  const openCustomModal = () => {
+    setCustomAmount('250');
+    setCustomTime(dayjs().format('HH:mm'));
+    setIsCustomModalOpen(true);
+  };
+
+  const handleSaveCustom = () => {
+    const parsedAmount = parseInt(customAmount, 10);
+    if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      const [h, m] = customTime.split(':').map(Number);
+      const timestamp = dayjs()
+        .hour(h ?? 0)
+        .minute(m ?? 0)
+        .second(0)
+        .millisecond(0)
+        .valueOf();
+      dispatch(addIntakeAt({ amount: parsedAmount, timestamp }));
+    }
+    setIsCustomModalOpen(false);
+  };
+
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.greeting}>{greeting}</Text>
-          <Text style={styles.date}>{dayjs().format('dddd, MMM D')}</Text>
-        </View>
-        <Pressable
-          style={styles.undoButton}
-          onPress={undo}
-          disabled={!lastEntry}
-          accessibilityRole="button"
-          accessibilityLabel="Undo last intake"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <UndoIcon size={18} color={lastEntry ? colors.primary : colors.textMuted} />
-          <Text
-            style={[
-              styles.undoText,
-              !lastEntry && { color: colors.textMuted },
-            ]}
-          >
-            Undo
-          </Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.ringWrap}>
-        <ProgressRing progress={percent / 100} size={240} strokeWidth={20}>
-          <View style={styles.ringCenter}>
-            <Text style={styles.ringValue}>
-              {liters(consumed)}L
-            </Text>
-            <Text style={styles.ringGoal}>of {liters(goal)}L goal</Text>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{percent}% completed</Text>
-            </View>
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.date}>{dayjs().format('dddd, MMM D')}</Text>
           </View>
-        </ProgressRing>
-      </View>
-
-      <View style={styles.quickRow}>
-        {QUICK_ADD.map((amount) => (
           <Pressable
-            key={amount}
-            style={({ pressed }) => [
-              styles.quickButton,
-              pressed && styles.quickButtonPressed,
-            ]}
-            onPress={() => add(amount)}
+            style={styles.undoButton}
+            onPress={undo}
+            disabled={!lastEntry}
             accessibilityRole="button"
-            accessibilityLabel={`Add ${amount} ml of water`}
+            accessibilityLabel="Undo last intake"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <DropIcon size={22} color={colors.white} />
-            <Text style={styles.quickButtonText}>+{amount} ml</Text>
+            <UndoIcon size={18} color={lastEntry ? colors.primary : colors.textMuted} />
+            <Text
+              style={[
+                styles.undoText,
+                !lastEntry && { color: colors.textMuted },
+              ]}
+            >
+              Undo
+            </Text>
           </Pressable>
-        ))}
-      </View>
+        </View>
 
-      <View style={styles.presetRow}>
-        {PRESET_AMOUNTS.map((amount) => (
+        <View style={styles.ringWrap}>
+          <ProgressRing progress={percent / 100} size={240} strokeWidth={20}>
+            <View style={styles.ringCenter}>
+              <Text style={styles.ringValue}>
+                {liters(consumed)}L
+              </Text>
+              <Text style={styles.ringGoal}>of {liters(goal)}L goal</Text>
+              <View style={styles.pill}>
+                <Text style={styles.pillText}>{percent}% completed</Text>
+              </View>
+            </View>
+          </ProgressRing>
+        </View>
+
+        <View style={styles.quickRow}>
+          {QUICK_ADD.map((amount) => (
+            <Pressable
+              key={amount}
+              style={({ pressed }) => [
+                styles.quickButton,
+                pressed && styles.quickButtonPressed,
+              ]}
+              onPress={() => add(amount)}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${amount} ml of water`}
+            >
+              <DropIcon size={22} color={colors.white} />
+              <Text style={styles.quickButtonText}>+{amount} ml</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.presetRow}>
+          {PRESET_AMOUNTS.map((amount) => (
+            <Pressable
+              key={amount}
+              style={({ pressed }) => [
+                styles.presetButton,
+                pressed && styles.presetButtonPressed,
+              ]}
+              onPress={() => add(amount)}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${amount} ml of water`}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            >
+              <Text style={styles.presetText}>+{amount}</Text>
+            </Pressable>
+          ))}
           <Pressable
-            key={amount}
             style={({ pressed }) => [
               styles.presetButton,
+              styles.customPresetButton,
               pressed && styles.presetButtonPressed,
             ]}
-            onPress={() => add(amount)}
+            onPress={openCustomModal}
             accessibilityRole="button"
-            accessibilityLabel={`Add ${amount} ml of water`}
+            accessibilityLabel="Add custom water amount and time"
             hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           >
-            <Text style={styles.presetText}>+{amount}</Text>
+            <PlusIcon size={14} color={colors.primaryDark} />
+            <Text style={styles.presetText}>Custom</Text>
           </Pressable>
-        ))}
-      </View>
-
-      <Card
-        style={styles.reminderCard}
-        onPress={!nextReminder ? () => navigation.navigate('Reminders') : undefined}
-        accessibilityLabel={
-          nextReminder
-            ? `Next reminder: ${nextReminder}`
-            : 'Reminders are off. Tap to open Reminders tab.'
-        }
-      >
-        <View style={styles.reminderRow}>
-          <View style={styles.reminderIcon}>
-            <BellIcon size={20} color={colors.primary} />
-          </View>
-          <View style={styles.reminderBody}>
-            <Text style={styles.reminderTitle}>
-              {nextReminder
-                ? `Next reminder: ${nextReminder}`
-                : 'Reminders are off'}
-            </Text>
-            <Text style={styles.reminderSubtitle}>
-              {nextReminder
-                ? `Every ${minutesToLabel(reminders.intervalMinutes)} · ${reminders.startTime} – ${reminders.endTime}`
-                : 'Turn them on from the Reminders tab'}
-            </Text>
-          </View>
         </View>
-      </Card>
-    </ScrollView>
+
+        <Card
+          style={styles.reminderCard}
+          onPress={!nextReminder ? () => navigation.navigate('Reminders') : undefined}
+          accessibilityLabel={
+            nextReminder
+              ? `Next reminder: ${formatTime12(nextReminder)}`
+              : 'Reminders are off. Tap to open Reminders tab.'
+          }
+        >
+          <View style={styles.reminderRow}>
+            <View style={styles.reminderIcon}>
+              <BellIcon size={20} color={colors.primary} />
+            </View>
+            <View style={styles.reminderBody}>
+              <Text style={styles.reminderTitle}>
+                {nextReminder
+                  ? `Next reminder: ${formatTime12(nextReminder)}`
+                  : 'Reminders are off'}
+              </Text>
+              <Text style={styles.reminderSubtitle}>
+                {nextReminder
+                  ? `Every ${minutesToLabel(reminders.intervalMinutes)} · ${formatTimeRange(reminders.startTime, reminders.endTime)}`
+                  : 'Turn them on from the Reminders tab'}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      </ScrollView>
+
+      {/* Custom Intake Modal */}
+      <Modal
+        visible={isCustomModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsCustomModalOpen(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setIsCustomModalOpen(false)}
+        >
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Add Custom Drink</Text>
+            <Text style={styles.modalSubtitle}>
+              Specify amount and logged time
+            </Text>
+
+            <View style={styles.modalFieldGroup}>
+              <Text style={styles.modalFieldLabel}>Amount</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={customAmount}
+                  onChangeText={setCustomAmount}
+                  keyboardType="number-pad"
+                  autoFocus
+                  selectTextOnFocus
+                />
+                <Text style={styles.modalUnit}>ml</Text>
+              </View>
+            </View>
+
+            <View style={styles.modalFieldGroup}>
+              <Text style={styles.modalFieldLabel}>Time</Text>
+              <View style={styles.timePickerContainer}>
+                <TimePicker value={customTime} onChange={setCustomTime} />
+              </View>
+            </View>
+
+            <View style={styles.modalButtonsRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel custom intake"
+                style={styles.modalCancelBtn}
+                onPress={() => setIsCustomModalOpen(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Add custom intake"
+                style={styles.modalSaveBtn}
+                onPress={handleSaveCustom}
+              >
+                <Text style={styles.modalSaveBtnText}>Add</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
 
@@ -307,5 +418,117 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  customPresetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceAlt,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  modalTitle: {
+    ...typography.subheading,
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+    marginBottom: spacing.md,
+  },
+  modalFieldGroup: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalFieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modalInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalInput: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    minWidth: 100,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalUnit: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
+  },
+  timePickerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+    marginTop: spacing.sm,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSaveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.white,
   },
 });

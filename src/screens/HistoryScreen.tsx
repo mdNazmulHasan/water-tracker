@@ -82,9 +82,11 @@ export default function HistoryScreen() {
       );
     const data: BarDatum[] = [];
     for (let h = 0; h < 24; h++) {
+      const displayHour = h % 12 === 0 ? 12 : h % 12;
+      const ampm = h < 12 ? 'a' : 'p';
       data.push({
         value: hours.get(h) ?? 0,
-        label: `${String(h).padStart(2, '0')}`,
+        label: `${displayHour}${ampm}`,
       });
     }
     return data;
@@ -363,7 +365,7 @@ const styles = StyleSheet.create({
   timelineTime: {
     fontSize: 14,
     color: colors.textSecondary,
-    width: 56,
+    width: 72,
     fontVariant: ['tabular-nums'],
   },
   timelineAmount: {
