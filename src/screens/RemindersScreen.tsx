@@ -23,11 +23,12 @@ import { colors, radius, spacing, typography } from '../theme';
 import Card from '../components/Card';
 import AppSwitch from '../components/AppSwitch';
 import TimePicker from '../components/TimePicker';
-import { minutesToLabel } from '../utils/date';
+import { clampTime, minutesToLabel, timeToMinutes } from '../utils/date';
 
 export default function RemindersScreen() {
   const dispatch = useDispatch();
   const reminders = useSelector((s: RootState) => s.reminders);
+  const profile = useSelector((s: RootState) => s.profile);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -81,6 +82,64 @@ export default function RemindersScreen() {
     dispatch(setRemindersEnabled(value));
   };
 
+  const handleStartTimeChange = (newTime: string) => {
+    const minMin = timeToMinutes(profile.wakeTime);
+    const maxMin = Math.min(
+      timeToMinutes(profile.sleepTime),
+      timeToMinutes(reminders.endTime),
+    );
+    const targetMin = timeToMinutes(newTime);
+
+    if (targetMin < minMin) {
+      Alert.alert(
+        'Time outside range',
+        `Start time cannot be earlier than your wake time (${profile.wakeTime}).`,
+      );
+      dispatch(setStartTime(profile.wakeTime));
+    } else if (targetMin > maxMin) {
+      const boundary =
+        timeToMinutes(reminders.endTime) < timeToMinutes(profile.sleepTime)
+          ? reminders.endTime
+          : profile.sleepTime;
+      Alert.alert(
+        'Time outside range',
+        `Start time cannot be after ${boundary}.`,
+      );
+      dispatch(setStartTime(boundary));
+    } else {
+      dispatch(setStartTime(newTime));
+    }
+  };
+
+  const handleEndTimeChange = (newTime: string) => {
+    const minMin = Math.max(
+      timeToMinutes(profile.wakeTime),
+      timeToMinutes(reminders.startTime),
+    );
+    const maxMin = timeToMinutes(profile.sleepTime);
+    const targetMin = timeToMinutes(newTime);
+
+    if (targetMin > maxMin) {
+      Alert.alert(
+        'Time outside range',
+        `End time cannot be later than your sleep time (${profile.sleepTime}).`,
+      );
+      dispatch(setEndTime(profile.sleepTime));
+    } else if (targetMin < minMin) {
+      const boundary =
+        timeToMinutes(reminders.startTime) > timeToMinutes(profile.wakeTime)
+          ? reminders.startTime
+          : profile.wakeTime;
+      Alert.alert(
+        'Time outside range',
+        `End time cannot be before ${boundary}.`,
+      );
+      dispatch(setEndTime(boundary));
+    } else {
+      dispatch(setEndTime(newTime));
+    }
+  };
+
   return (
     <ScrollView
       style={styles.screen}
@@ -109,12 +168,15 @@ export default function RemindersScreen() {
 
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Schedule</Text>
+        <Text style={styles.rowNote}>
+          Range: Wake ({profile.wakeTime}) – Sleep ({profile.sleepTime})
+        </Text>
         <View style={styles.timesRow}>
           <View style={styles.timeColumn}>
             <Text style={styles.timeLabel}>Start</Text>
             <TimePicker
               value={reminders.startTime}
-              onChange={(t) => dispatch(setStartTime(t))}
+              onChange={handleStartTimeChange}
             />
           </View>
           <Text style={styles.timeDash}>→</Text>
@@ -122,7 +184,7 @@ export default function RemindersScreen() {
             <Text style={styles.timeLabel}>End</Text>
             <TimePicker
               value={reminders.endTime}
-              onChange={(t) => dispatch(setEndTime(t))}
+              onChange={handleEndTimeChange}
             />
           </View>
         </View>

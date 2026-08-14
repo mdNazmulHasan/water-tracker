@@ -9,8 +9,8 @@ export interface RemindersState {
 
 const initialState: RemindersState = {
   enabled: false,
-  startTime: '08:00',
-  endTime: '22:00',
+  startTime: '07:00',
+  endTime: '23:00',
   intervalMinutes: 120,
 };
 

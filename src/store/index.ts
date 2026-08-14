@@ -8,7 +8,7 @@ import hydration, {
   removeIntake,
   clearDay,
 } from './slices/hydration';
-import profile from './slices/profile';
+import profile, { setWakeTime, setSleepTime } from './slices/profile';
 import reminders, {
   setRemindersEnabled,
   setStartTime,
@@ -20,6 +20,7 @@ import achievements, {
   satisfiedAchievementIds,
 } from './slices/achievements';
 import { syncReminders } from '../services/notifications';
+import { clampTime, timeToMinutes } from '../utils/date';
 
 const rootReducer = combineReducers({
   hydration,
@@ -47,6 +48,43 @@ listenerMiddleware.startListening({
       state.profile.dailyGoalMl,
     );
     api.dispatch(unlockAchievements(satisfied));
+  },
+});
+
+listenerMiddleware.startListening({
+  matcher: isAnyOf(setWakeTime, setSleepTime),
+  effect: (action, api) => {
+    const state = api.getState() as RootState;
+    const { wakeTime, sleepTime } = state.profile;
+    let { startTime, endTime } = state.reminders;
+
+    if (setWakeTime.match(action)) {
+      startTime = wakeTime;
+      if (
+        timeToMinutes(endTime) < timeToMinutes(startTime) ||
+        timeToMinutes(endTime) > timeToMinutes(sleepTime)
+      ) {
+        endTime = sleepTime;
+      }
+    } else if (setSleepTime.match(action)) {
+      endTime = sleepTime;
+      if (
+        timeToMinutes(startTime) > timeToMinutes(endTime) ||
+        timeToMinutes(startTime) < timeToMinutes(wakeTime)
+      ) {
+        startTime = wakeTime;
+      }
+    }
+
+    const nextStart = clampTime(startTime, wakeTime, sleepTime);
+    const nextEnd = clampTime(endTime, nextStart, sleepTime);
+
+    if (nextStart !== state.reminders.startTime) {
+      api.dispatch(setStartTime(nextStart));
+    }
+    if (nextEnd !== state.reminders.endTime) {
+      api.dispatch(setEndTime(nextEnd));
+    }
   },
 });
 
