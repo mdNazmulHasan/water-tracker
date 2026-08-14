@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,7 +35,16 @@ export default function RemindersScreen() {
     import('@notifee/react-native')
       .then((notifee) => notifee.default.getNotificationSettings())
       .then((settings) => {
-        if (mounted) setPermissionGranted(settings.authorizationStatus >= 1);
+        if (mounted) {
+          // authorizationStatus: 1 = AUTHORIZED, 2 = PROVISIONAL, 0 = DENIED, -1 = NOT_DETERMINED
+          if (settings.authorizationStatus >= 1) {
+            setPermissionGranted(true);
+          } else if (settings.authorizationStatus === 0) {
+            setPermissionGranted(false);
+          } else {
+            setPermissionGranted(null);
+          }
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -59,22 +70,16 @@ export default function RemindersScreen() {
         Alert.alert(
           'Notifications disabled',
           'Enable notifications for Water Tracker in your system settings to receive reminders.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
         );
         return;
       }
     }
     dispatch(setRemindersEnabled(value));
   };
-
-  const row = (label: string, children: React.ReactNode, note?: string) => (
-    <View style={styles.row}>
-      <View style={styles.rowLabelWrap}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        {note ? <Text style={styles.rowNote}>{note}</Text> : null}
-      </View>
-      {children}
-    </View>
-  );
 
   return (
     <ScrollView
@@ -83,7 +88,23 @@ export default function RemindersScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Card style={styles.card}>
-        {row('Reminders', <AppSwitch value={reminders.enabled} onValueChange={toggle} />, permissionGranted === false ? 'Permission denied' : undefined)}
+        <View style={styles.row}>
+          <View style={styles.rowLabelWrap}>
+            <Text style={styles.rowLabel}>Reminders</Text>
+            {reminders.enabled && permissionGranted === false && (
+              <TouchableOpacity
+                onPress={() => Linking.openSettings()}
+                accessibilityRole="button"
+                accessibilityLabel="Open settings to enable notifications"
+              >
+                <Text style={styles.rowPermissionNote}>
+                  Permission denied — Tap to open Settings
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <AppSwitch value={reminders.enabled} onValueChange={toggle} />
+        </View>
       </Card>
 
       <Card style={styles.card}>
@@ -120,6 +141,9 @@ export default function RemindersScreen() {
                 key={min}
                 style={[styles.intervalChip, active && styles.intervalChipActive]}
                 onPress={() => dispatch(setIntervalMinutes(min))}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`Interval option ${minutesToLabel(min)}`}
               >
                 <Text
                   style={[
@@ -192,6 +216,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  rowPermissionNote: {
+    fontSize: 12,
+    color: colors.danger || '#ef4444',
+    marginTop: 4,
+    fontWeight: '500',
   },
   timesRow: {
     flexDirection: 'row',
