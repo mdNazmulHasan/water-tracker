@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { LayoutChangeEvent, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing } from '../theme';
 
 interface CardProps {
@@ -8,6 +8,7 @@ interface CardProps {
   onPress?: () => void;
   accessibilityRole?: 'button';
   accessibilityLabel?: string;
+  onLayout?: (e: LayoutChangeEvent) => void;
 }
 
 export default function Card({
@@ -16,6 +17,7 @@ export default function Card({
   onPress,
   accessibilityRole,
   accessibilityLabel,
+  onLayout,
 }: CardProps) {
   if (onPress) {
     return (
@@ -24,12 +26,17 @@ export default function Card({
         onPress={onPress}
         accessibilityRole={accessibilityRole ?? 'button'}
         accessibilityLabel={accessibilityLabel}
+        onLayout={onLayout}
       >
         {children}
       </Pressable>
     );
   }
-  return <View style={[styles.card, style]}>{children}</View>;
+  return (
+    <View style={[styles.card, style]} onLayout={onLayout}>
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

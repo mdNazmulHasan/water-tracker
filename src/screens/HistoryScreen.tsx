@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
 import { RootState } from '../store';
@@ -31,7 +39,7 @@ export default function HistoryScreen() {
   const entries = useSelector((s: RootState) => s.hydration.entries);
   const goal = useSelector((s: RootState) => s.profile.dailyGoalMl);
   const [period, setPeriod] = useState<Period>('today');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingEntry, setEditingEntry] = useState<IntakeEntry | null>(null);
   const [editAmountText, setEditAmountText] = useState<string>('');
 
   const byDay = useMemo(() => entriesByDay(entries), [entries]);
@@ -48,20 +56,21 @@ export default function HistoryScreen() {
   );
 
   const handleStartEdit = (entry: IntakeEntry) => {
-    setEditingId(entry.id);
+    setEditingEntry(entry);
     setEditAmountText(String(entry.amount));
   };
 
-  const handleSaveEdit = (id: string) => {
+  const handleSaveEdit = () => {
+    if (!editingEntry) return;
     const parsed = parseInt(editAmountText, 10);
     if (!isNaN(parsed) && parsed > 0) {
-      dispatch(updateIntake({ id, amount: parsed }));
+      dispatch(updateIntake({ id: editingEntry.id, amount: parsed }));
     }
-    setEditingId(null);
+    setEditingEntry(null);
   };
 
   const handleCancelEdit = () => {
-    setEditingId(null);
+    setEditingEntry(null);
   };
 
   const hourlyData = useMemo<BarDatum[]>(() => {
@@ -106,76 +115,40 @@ export default function HistoryScreen() {
   const todayTotal = totalForDay(todayEntries);
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <SegmentedControl options={PERIODS} value={period} onChange={setPeriod} />
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <SegmentedControl options={PERIODS} value={period} onChange={setPeriod} />
 
-      {period === 'today' && (
-        <>
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Today's intake</Text>
-            <Text style={styles.bigValue}>{liters(todayTotal)}L</Text>
-            <Text style={styles.subValue}>
-              {todayEntries.length} drinks · {Math.max(0, goal - todayTotal)} ml to go
-            </Text>
-            <View style={styles.chart}>
-              <BarChart
-                data={hourlyData}
-                goal={goal / 24}
-                height={140}
-                formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
-              />
-            </View>
-          </Card>
-
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Timeline</Text>
-            {sortedTodayEntries.length === 0 ? (
-              <Text style={styles.emptyText}>
-                No drinks logged yet today. Start from the Home tab!
+        {period === 'today' && (
+          <>
+            <Card style={styles.card}>
+              <Text style={styles.cardTitle}>Today's intake</Text>
+              <Text style={styles.bigValue}>{liters(todayTotal)}L</Text>
+              <Text style={styles.subValue}>
+                {todayEntries.length} drinks · {Math.max(0, goal - todayTotal)} ml to go
               </Text>
-            ) : (
-              sortedTodayEntries.map((e) => {
-                const isEditing = editingId === e.id;
-                if (isEditing) {
-                  return (
-                    <View key={e.id} style={styles.editRow}>
-                      <Text style={styles.timelineTime}>
-                        {formatClock(e.timestamp)}
-                      </Text>
-                      <TextInput
-                        style={styles.editInput}
-                        value={editAmountText}
-                        onChangeText={setEditAmountText}
-                        keyboardType="number-pad"
-                        autoFocus
-                        selectTextOnFocus
-                      />
-                      <Text style={styles.editUnit}>ml</Text>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Save edit"
-                        style={styles.saveBtn}
-                        onPress={() => handleSaveEdit(e.id)}
-                      >
-                        <Text style={styles.saveBtnText}>Save</Text>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Cancel edit"
-                        style={styles.cancelBtn}
-                        onPress={handleCancelEdit}
-                      >
-                        <Text style={styles.cancelBtnText}>Cancel</Text>
-                      </Pressable>
-                    </View>
-                  );
-                }
+              <View style={styles.chart}>
+                <BarChart
+                  data={hourlyData}
+                  goal={goal / 24}
+                  height={140}
+                  formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
+                />
+              </View>
+            </Card>
 
-                return (
+            <Card style={styles.card}>
+              <Text style={styles.cardTitle}>Timeline</Text>
+              {sortedTodayEntries.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  No drinks logged yet today. Start from the Home tab!
+                </Text>
+              ) : (
+                sortedTodayEntries.map((e) => (
                   <View key={e.id} style={styles.timelineRow}>
                     <View style={styles.timelineDot} />
                     <Text style={styles.timelineTime}>
@@ -203,73 +176,123 @@ export default function HistoryScreen() {
                       </Pressable>
                     </View>
                   </View>
-                );
-              })
-            )}
+                ))
+              )}
+            </Card>
+          </>
+        )}
+
+        {period === 'week' && (
+          <Card style={styles.card}>
+            <Text style={styles.cardTitle}>Last 7 days</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{liters(weekTotal)}L</Text>
+                <Text style={styles.statLabel}>Total</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{liters(weekTotal / 7)}L</Text>
+                <Text style={styles.statLabel}>Daily avg</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{liters(weekBest)}L</Text>
+                <Text style={styles.statLabel}>Best day</Text>
+              </View>
+            </View>
+            <View style={styles.chart}>
+              <BarChart
+                data={weekData}
+                goal={goal}
+                height={170}
+                highlightIndex={6}
+                formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
+              />
+            </View>
           </Card>
-        </>
-      )}
+        )}
 
-      {period === 'week' && (
-        <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Last 7 days</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{liters(weekTotal)}L</Text>
-              <Text style={styles.statLabel}>Total</Text>
+        {period === 'month' && (
+          <Card style={styles.card}>
+            <Text style={styles.cardTitle}>Last 30 days</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{liters(monthTotal)}L</Text>
+                <Text style={styles.statLabel}>Total</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>{liters(monthAvg)}L</Text>
+                <Text style={styles.statLabel}>Daily avg</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statValue}>
+                  {monthData.filter((d) => d.value >= goal).length}
+                </Text>
+                <Text style={styles.statLabel}>Goal days</Text>
+              </View>
             </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{liters(weekTotal / 7)}L</Text>
-              <Text style={styles.statLabel}>Daily avg</Text>
+            <View style={styles.chart}>
+              <BarChart
+                data={monthData}
+                goal={goal}
+                height={190}
+                highlightIndex={29}
+                formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
+              />
             </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{liters(weekBest)}L</Text>
-              <Text style={styles.statLabel}>Best day</Text>
-            </View>
-          </View>
-          <View style={styles.chart}>
-            <BarChart
-              data={weekData}
-              goal={goal}
-              height={170}
-              highlightIndex={6}
-              formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
-            />
-          </View>
-        </Card>
-      )}
+          </Card>
+        )}
+      </ScrollView>
 
-      {period === 'month' && (
-        <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Last 30 days</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{liters(monthTotal)}L</Text>
-              <Text style={styles.statLabel}>Total</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{liters(monthAvg)}L</Text>
-              <Text style={styles.statLabel}>Daily avg</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>
-                {monthData.filter((d) => d.value >= goal).length}
+      {/* Edit Intake Modal */}
+      <Modal
+        visible={!!editingEntry}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelEdit}
+      >
+        <Pressable style={styles.modalOverlay} onPress={handleCancelEdit}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Edit Drink</Text>
+            {editingEntry && (
+              <Text style={styles.modalSubtitle}>
+                Logged at {formatClock(editingEntry.timestamp)}
               </Text>
-              <Text style={styles.statLabel}>Goal days</Text>
+            )}
+
+            <View style={styles.modalInputRow}>
+              <TextInput
+                style={styles.modalInput}
+                value={editAmountText}
+                onChangeText={setEditAmountText}
+                keyboardType="number-pad"
+                autoFocus
+                selectTextOnFocus
+              />
+              <Text style={styles.modalUnit}>ml</Text>
             </View>
-          </View>
-          <View style={styles.chart}>
-            <BarChart
-              data={monthData}
-              goal={goal}
-              height={190}
-              highlightIndex={29}
-              formatValue={(v) => (v > 0 ? `${liters(v)}L` : '')}
-            />
-          </View>
-        </Card>
-      )}
-    </ScrollView>
+
+            <View style={styles.modalButtonsRow}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel edit"
+                style={styles.modalCancelBtn}
+                onPress={handleCancelEdit}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Save edit"
+                style={styles.modalSaveBtn}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.modalSaveBtnText}>Save</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
   );
 }
 
@@ -362,54 +385,98 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     paddingHorizontal: spacing.xs,
   },
-  editRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  editInput: {
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    minWidth: 60,
-    textAlign: 'center',
-    marginHorizontal: spacing.xs,
-  },
-  editUnit: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginRight: spacing.sm,
-  },
-  saveBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-    marginRight: spacing.xs,
-  },
-  saveBtnText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  cancelBtn: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 4,
-  },
-  cancelBtnText: {
-    color: colors.textMuted,
-    fontSize: 12,
-  },
   emptyText: {
     fontSize: 14,
     color: colors.textMuted,
     marginTop: spacing.sm,
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  modalTitle: {
+    ...typography.subheading,
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+    marginBottom: spacing.md,
+  },
+  modalInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalInput: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    minWidth: 100,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalUnit: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSaveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.white,
   },
 });
