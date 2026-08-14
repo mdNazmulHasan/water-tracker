@@ -1,6 +1,6 @@
 {
   "name": "WaterTracker",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -10,7 +10,7 @@
     "start:clean": "react-native start --reset-cache",
     "test": "jest",
     "android:clean": "cd android && ./gradlew clean && cd ..",
-    "android:buildApk": "rm -rf android/app/src/main/assets/index.android.bundle android/app/src/main/assets/index.android.bundle.meta && cd android && ./gradlew clean assembleRelease && cd .."
+    "android:buildApk": "node scripts/build-apk.js"
   },
   "dependencies": {
     "@notifee/react-native": "^9.1.8",
