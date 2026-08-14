@@ -13,7 +13,7 @@ import { pct, liters } from '../utils/water';
 import { minutesToLabel } from '../utils/date';
 
 const QUICK_ADD = [250, 500];
-const PRESET_AMOUNTS = [150, 250, 400, 750];
+const PRESET_AMOUNTS = [150, 300, 450, 750];
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
@@ -22,10 +22,10 @@ export default function HomeScreen() {
   const reminders = useSelector((s: RootState) => s.reminders);
 
   const today = useMemo(() => {
-    const key = dayjs().format('YYYY-MM-DD');
-    return entries.filter(
-      (e) => dayjs(e.timestamp).format('YYYY-MM-DD') === key,
-    );
+    const now = dayjs();
+    return entries
+      .filter((e) => dayjs(e.timestamp).isSame(now, 'day'))
+      .sort((a, b) => a.timestamp - b.timestamp);
   }, [entries]);
 
   const consumed = today.reduce((sum, e) => sum + e.amount, 0);
@@ -59,7 +59,14 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>{greeting}</Text>
           <Text style={styles.date}>{dayjs().format('dddd, MMM D')}</Text>
         </View>
-        <Pressable style={styles.undoButton} onPress={undo} disabled={!lastEntry}>
+        <Pressable
+          style={styles.undoButton}
+          onPress={undo}
+          disabled={!lastEntry}
+          accessibilityRole="button"
+          accessibilityLabel="Undo last intake"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <UndoIcon size={18} color={lastEntry ? colors.primary : colors.textMuted} />
           <Text
             style={[
@@ -95,6 +102,8 @@ export default function HomeScreen() {
               pressed && styles.quickButtonPressed,
             ]}
             onPress={() => add(amount)}
+            accessibilityRole="button"
+            accessibilityLabel={`Add ${amount} ml of water`}
           >
             <DropIcon size={22} color={colors.white} />
             <Text style={styles.quickButtonText}>+{amount} ml</Text>
@@ -106,8 +115,14 @@ export default function HomeScreen() {
         {PRESET_AMOUNTS.map((amount) => (
           <Pressable
             key={amount}
-            style={styles.presetButton}
+            style={({ pressed }) => [
+              styles.presetButton,
+              pressed && styles.presetButtonPressed,
+            ]}
             onPress={() => add(amount)}
+            accessibilityRole="button"
+            accessibilityLabel={`Add ${amount} ml of water`}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           >
             <Text style={styles.presetText}>+{amount}</Text>
           </Pressable>
@@ -243,6 +258,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  presetButtonPressed: {
+    opacity: 0.7,
+    backgroundColor: colors.primarySoft,
   },
   presetText: {
     color: colors.primaryDark,
