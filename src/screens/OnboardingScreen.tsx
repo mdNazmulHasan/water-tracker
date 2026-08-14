@@ -19,6 +19,7 @@ import {
   setWakeTime,
   setSleepTime,
   setDailyGoal,
+  applyRecommendedGoal,
   completeOnboarding,
 } from '../store/slices/profile';
 import { colors, radius, spacing, typography } from '../theme';
@@ -255,6 +256,19 @@ export default function OnboardingScreen() {
                 <Text style={styles.stepButtonText}>+</Text>
               </Pressable>
             </View>
+
+            {profile.customGoal && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Use recommended daily goal"
+                style={styles.recommendedButton}
+                onPress={() => dispatch(applyRecommendedGoal())}
+              >
+                <Text style={styles.recommendedButtonText}>
+                  Use recommended ({liters(recommended)}L)
+                </Text>
+              </Pressable>
+            )}
           </View>
         )}
       </ScrollView>
@@ -448,6 +462,16 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 22,
     fontWeight: '700',
+  },
+  recommendedButton: {
+    marginTop: spacing.md,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  recommendedButtonText: {
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 13,
   },
   footer: {
     flexDirection: 'row',
