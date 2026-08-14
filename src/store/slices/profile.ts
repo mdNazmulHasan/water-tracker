@@ -31,6 +31,7 @@ export interface ProfileState {
   sleepTime: string;
   dailyGoalMl: number;
   customGoal: boolean;
+  hasCompletedOnboarding: boolean;
 }
 
 const initialState: ProfileState = {
@@ -41,6 +42,7 @@ const initialState: ProfileState = {
   sleepTime: '23:00',
   dailyGoalMl: recommendedGoalMl(70, 'light', 'female'),
   customGoal: false,
+  hasCompletedOnboarding: false,
 };
 
 function applyRecommended(state: ProfileState) {
@@ -83,6 +85,12 @@ const profileSlice = createSlice({
       state.customGoal = false;
       applyRecommended(state);
     },
+    completeOnboarding(state) {
+      state.hasCompletedOnboarding = true;
+    },
+    resetOnboarding(state) {
+      state.hasCompletedOnboarding = false;
+    },
   },
 });
 
@@ -94,5 +102,7 @@ export const {
   setSleepTime,
   setDailyGoal,
   applyRecommendedGoal,
+  completeOnboarding,
+  resetOnboarding,
 } = profileSlice.actions;
 export default profileSlice.reducer;

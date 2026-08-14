@@ -14,9 +14,24 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './src/store';
 import { syncReminders, setupForegroundNotifications } from './src/services/notifications';
 import RootNavigator from './src/navigation/RootNavigator';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import { colors } from './src/theme';
+import { useSelector } from 'react-redux';
+import { RootState } from './src/store';
 
 setupForegroundNotifications();
+
+function MainContent() {
+  const hasCompletedOnboarding = useSelector(
+    (state: RootState) => state.profile.hasCompletedOnboarding
+  );
+
+  if (!hasCompletedOnboarding) {
+    return <OnboardingScreen />;
+  }
+
+  return <RootNavigator />;
+}
 
 function ReminderSyncBootstrap() {
   useEffect(() => {
@@ -48,7 +63,7 @@ function App() {
           >
             <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
             <ReminderSyncBootstrap />
-            <RootNavigator />
+            <MainContent />
           </NavigationContainer>
         </SafeAreaProvider>
       </PersistGate>
