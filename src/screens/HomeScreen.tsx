@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { RootState } from '../store';
 import { addIntake, removeIntake } from '../store/slices/hydration';
@@ -11,12 +12,14 @@ import Card from '../components/Card';
 import { DropIcon, BellIcon, UndoIcon } from '../components/icons';
 import { pct, liters } from '../utils/water';
 import { minutesToLabel } from '../utils/date';
+import { TabNavigation } from '../navigation/types';
 
 const QUICK_ADD = [250, 500];
 const PRESET_AMOUNTS = [150, 300, 450, 750];
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
+  const navigation = useNavigation<TabNavigation>();
   const entries = useSelector((s: RootState) => s.hydration.entries);
   const goal = useSelector((s: RootState) => s.profile.dailyGoalMl);
   const reminders = useSelector((s: RootState) => s.reminders);
@@ -129,7 +132,15 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      <Card style={styles.reminderCard}>
+      <Card
+        style={styles.reminderCard}
+        onPress={!nextReminder ? () => navigation.navigate('Reminders') : undefined}
+        accessibilityLabel={
+          nextReminder
+            ? `Next reminder: ${nextReminder}`
+            : 'Reminders are off. Tap to open Reminders tab.'
+        }
+      >
         <View style={styles.reminderRow}>
           <View style={styles.reminderIcon}>
             <BellIcon size={20} color={colors.primary} />
