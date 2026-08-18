@@ -35,8 +35,8 @@ function MainContent() {
 
 function ReminderSyncBootstrap() {
   useEffect(() => {
-    const { reminders } = store.getState();
-    syncReminders(reminders);
+    const { reminders, hydration, profile } = store.getState();
+    syncReminders(reminders, hydration.entries, profile);
   }, []);
 
   return null;

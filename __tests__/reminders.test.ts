@@ -1,4 +1,4 @@
-import { clampTime, formatClock, formatTime12, formatTimeRange, minutesToTime, timeToMinutes } from '../src/utils/date';
+import { clampTime, formatTime12, formatTimeRange, minutesToTime, timeToMinutes } from '../src/utils/date';
 import { computeSchedule } from '../src/utils/schedule';
 
 describe('Time utils & Reminders boundary logic', () => {

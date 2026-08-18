@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export interface RemindersState {
   enabled: boolean;
+  smartRemindersEnabled: boolean;
   startTime: string;
   endTime: string;
   intervalMinutes: number;
@@ -9,6 +10,7 @@ export interface RemindersState {
 
 const initialState: RemindersState = {
   enabled: false,
+  smartRemindersEnabled: true,
   startTime: '07:00',
   endTime: '23:00',
   intervalMinutes: 120,
@@ -20,6 +22,9 @@ const remindersSlice = createSlice({
   reducers: {
     setRemindersEnabled(state, action: PayloadAction<boolean>) {
       state.enabled = action.payload;
+    },
+    setSmartRemindersEnabled(state, action: PayloadAction<boolean>) {
+      state.smartRemindersEnabled = action.payload;
     },
     setStartTime(state, action: PayloadAction<string>) {
       state.startTime = action.payload;
@@ -35,6 +40,7 @@ const remindersSlice = createSlice({
 
 export const {
   setRemindersEnabled,
+  setSmartRemindersEnabled,
   setStartTime,
   setEndTime,
   setIntervalMinutes,

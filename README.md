@@ -16,9 +16,15 @@
   - **Today (Hourly)**: Interactive 24-hour distribution chart and complete chronological intake timeline with inline entry editing (amount & time) and deletion.
   - **Week (7 Days)**: Daily consumption breakdown with total volume, daily average, and best day metrics.
   - **Month (30 Days)**: Monthly trend view displaying total volume, daily average, and count of goal-reached days.
-- **🔔 Smart Hydration Reminders**:
+- **⭐ Smart Hydration Engine (Adaptive Scheduling)**:
+  - **Adaptive Reminders**: Dynamically evaluates consumption pace against daily targets and automatically adapts reminder frequency (tightens when behind, spaces out when ahead to prevent spam).
+  - **Remaining-Goal Scheduling**: Computes a realistic drinking timetable and optimal portion sizes across the remaining active awake window before bedtime.
+  - **Missed Reminder & Inactivity Recovery**: Detects passed intervals and intake times, instantly recalculating the remainder of the day rather than blindly firing stale alerts.
+  - **Context-Aware Notifications**: Smart push alerts detailing exact suggested drink sizes (e.g. `+250ml`) and motivational catch-up or pace-maintaining copy.
+  - **Toggleable AI Mode**: Easily switch between the Smart Hydration Engine and classic fixed-interval reminders.
+- **🔔 Background Notifications**:
   - Configurable notification schedules bounded between wake and sleep times.
-  - Customizable intervals (every 30m, 1h, 1.5h, 2h, 3h, 4h).
+  - Customizable intervals (every 30m, 1h, 1.5h, 2h, 3h).
   - Background notification delivery via `@notifee/react-native`.
   - System permission checks with direct deep-linking to device app settings if permissions are denied.
 - **🏆 Streaks & Achievement Badges**:

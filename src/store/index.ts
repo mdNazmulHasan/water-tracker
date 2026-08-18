@@ -5,12 +5,23 @@ import { persistStore, persistReducer } from 'redux-persist';
 
 import hydration, {
   addIntake,
+  addIntakeAt,
+  updateIntake,
   removeIntake,
   clearDay,
 } from './slices/hydration';
-import profile, { setWakeTime, setSleepTime } from './slices/profile';
+import profile, {
+  setWakeTime,
+  setSleepTime,
+  setDailyGoal,
+  applyRecommendedGoal,
+  setWeight,
+  setActivityLevel,
+  setGender,
+} from './slices/profile';
 import reminders, {
   setRemindersEnabled,
+  setSmartRemindersEnabled,
   setStartTime,
   setEndTime,
   setIntervalMinutes,
@@ -40,7 +51,7 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 const listenerMiddleware = createListenerMiddleware();
 
 listenerMiddleware.startListening({
-  matcher: isAnyOf(addIntake, removeIntake, clearDay),
+  matcher: isAnyOf(addIntake, addIntakeAt, updateIntake, removeIntake, clearDay),
   effect: (_action, api) => {
     const state = api.getState() as RootState;
     const satisfied = satisfiedAchievementIds(
@@ -48,6 +59,11 @@ listenerMiddleware.startListening({
       state.profile.dailyGoalMl,
     );
     api.dispatch(unlockAchievements(satisfied));
+
+    // If smart reminders are on, intake updates recalculate the remaining schedule
+    if (state.reminders.enabled && state.reminders.smartRemindersEnabled) {
+      syncReminders(state.reminders, state.hydration.entries, state.profile);
+    }
   },
 });
 
@@ -91,13 +107,19 @@ listenerMiddleware.startListening({
 listenerMiddleware.startListening({
   matcher: isAnyOf(
     setRemindersEnabled,
+    setSmartRemindersEnabled,
     setStartTime,
     setEndTime,
     setIntervalMinutes,
+    setDailyGoal,
+    applyRecommendedGoal,
+    setWeight,
+    setActivityLevel,
+    setGender,
   ),
   effect: (_action, api) => {
     const state = api.getState() as RootState;
-    syncReminders(state.reminders);
+    syncReminders(state.reminders, state.hydration.entries, state.profile);
   },
 });
 

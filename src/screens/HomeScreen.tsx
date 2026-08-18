@@ -14,6 +14,7 @@ import dayjs from 'dayjs';
 import { RootState } from '../store';
 import { addIntake, addIntakeAt, removeIntake } from '../store/slices/hydration';
 import { computeSchedule, nextReminderAt } from '../utils/schedule';
+import { generateSmartSchedule } from '../utils/smartEngine';
 import { colors, radius, shadow, spacing, typography } from '../theme';
 import ProgressRing from '../components/ProgressRing';
 import Card from '../components/Card';
@@ -48,15 +49,41 @@ export default function HomeScreen() {
   const percent = pct(consumed, goal);
   const lastEntry = today.length > 0 ? today[today.length - 1] : null;
 
-  const nextReminder = useMemo(() => {
+  const smartInfo = useMemo(() => {
     if (!reminders.enabled) return null;
+
+    if (reminders.smartRemindersEnabled) {
+      const res = generateSmartSchedule(
+        consumed,
+        goal,
+        reminders.startTime,
+        reminders.endTime,
+        reminders.intervalMinutes,
+        lastEntry?.timestamp,
+      );
+      return {
+        isSmart: true,
+        nextTime: res.nextSlot?.time || null,
+        targetAmountMl: res.nextSlot?.targetAmountMl || res.pacing.nextSuggestedPortionMl,
+        pacingLabel: res.pacing.statusLabel,
+        isCompleted: res.pacing.status === 'completed',
+      };
+    }
+
     const schedule = computeSchedule(
       reminders.startTime,
       reminders.endTime,
       reminders.intervalMinutes,
     );
-    return nextReminderAt(schedule);
-  }, [reminders]);
+    const nextTime = nextReminderAt(schedule);
+    return {
+      isSmart: false,
+      nextTime,
+      targetAmountMl: 250,
+      pacingLabel: '',
+      isCompleted: false,
+    };
+  }, [reminders, consumed, goal, lastEntry]);
 
   const hour = dayjs().hour();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -184,11 +211,11 @@ export default function HomeScreen() {
 
         <Card
           style={styles.reminderCard}
-          onPress={!nextReminder ? () => navigation.navigate('Reminders') : undefined}
+          onPress={() => navigation.navigate('Reminders')}
           accessibilityLabel={
-            nextReminder
-              ? `Next reminder: ${formatTime12(nextReminder)}`
-              : 'Reminders are off. Tap to open Reminders tab.'
+            smartInfo?.nextTime
+              ? `Next reminder: ${formatTime12(smartInfo.nextTime)}, target ${smartInfo.targetAmountMl} ml`
+              : 'Reminders configuration'
           }
         >
           <View style={styles.reminderRow}>
@@ -196,15 +223,28 @@ export default function HomeScreen() {
               <BellIcon size={20} color={colors.primary} />
             </View>
             <View style={styles.reminderBody}>
-              <Text style={styles.reminderTitle}>
-                {nextReminder
-                  ? `Next reminder: ${formatTime12(nextReminder)}`
-                  : 'Reminders are off'}
-              </Text>
+              <View style={styles.reminderTitleRow}>
+                <Text style={styles.reminderTitle}>
+                  {!reminders.enabled
+                    ? 'Reminders are off'
+                    : smartInfo?.isCompleted
+                    ? 'Goal completed 🎉'
+                    : smartInfo?.nextTime
+                    ? `Next: ${formatTime12(smartInfo.nextTime)} (+${smartInfo.targetAmountMl}ml)`
+                    : 'No more reminders today'}
+                </Text>
+                {smartInfo?.isSmart && smartInfo?.pacingLabel ? (
+                  <View style={styles.homePacingBadge}>
+                    <Text style={styles.homePacingText}>{smartInfo.pacingLabel}</Text>
+                  </View>
+                ) : null}
+              </View>
               <Text style={styles.reminderSubtitle}>
-                {nextReminder
-                  ? `Every ${minutesToLabel(reminders.intervalMinutes)} · ${formatTimeRange(reminders.startTime, reminders.endTime)}`
-                  : 'Turn them on from the Reminders tab'}
+                {!reminders.enabled
+                  ? 'Turn them on from the Reminders tab'
+                  : smartInfo?.isSmart
+                  ? `Smart schedule · ${formatTimeRange(reminders.startTime, reminders.endTime)}`
+                  : `Every ${minutesToLabel(reminders.intervalMinutes)} · ${formatTimeRange(reminders.startTime, reminders.endTime)}`}
               </Text>
             </View>
           </View>
@@ -434,10 +474,28 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
     flex: 1,
   },
+  reminderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   reminderTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: colors.text,
+  },
+  homePacingBadge: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  homePacingText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   reminderSubtitle: {
     fontSize: 13,
