@@ -158,12 +158,12 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   badge: {
-    width: '31%',
+    width: '30.5%',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   badgeLocked: {
     opacity: 0.75,
