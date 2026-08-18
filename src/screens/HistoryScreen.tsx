@@ -99,10 +99,12 @@ export default function HistoryScreen() {
     const data: BarDatum[] = [];
     for (let h = 0; h < 24; h++) {
       const displayHour = h % 12 === 0 ? 12 : h % 12;
-      const ampm = h < 12 ? 'a' : 'p';
+      const ampm = h < 12 ? ' AM' : ' PM';
+      // Show text label every 4 hours (e.g. 12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM)
+      const label = h % 4 === 0 ? `${displayHour}${ampm}` : '';
       data.push({
         value: hours.get(h) ?? 0,
-        label: `${displayHour}${ampm}`,
+        label,
       });
     }
     return data;
@@ -112,7 +114,7 @@ export default function HistoryScreen() {
     const keys = lastNDayKeys(7);
     return keys.map((k) => ({
       value: totalForDay(byDay[k] ?? []),
-      label: dayjs(k).format('ddd').slice(0, 2),
+      label: dayjs(k).format('ddd').slice(0, 3),
     }));
   }, [byDay]);
 
@@ -121,10 +123,15 @@ export default function HistoryScreen() {
 
   const monthData = useMemo<BarDatum[]>(() => {
     const keys = lastNDayKeys(30);
-    return keys.map((k) => ({
-      value: totalForDay(byDay[k] ?? []),
-      label: `${dayjs(k).date()}`,
-    }));
+    return keys.map((k, index) => {
+      const dayNum = dayjs(k).date();
+      // Show day label every 5 days or 1st of month/last day
+      const label = index % 5 === 0 || index === keys.length - 1 ? `${dayNum}` : '';
+      return {
+        value: totalForDay(byDay[k] ?? []),
+        label,
+      };
+    });
   }, [byDay]);
 
   const monthTotal = monthData.reduce((s, d) => s + d.value, 0);

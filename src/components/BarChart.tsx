@@ -35,16 +35,16 @@ export default function BarChart({
 
   const peak = maxValue ?? Math.max(...data.map((d) => d.value), goal ?? 0, 1);
   const safePeak = peak <= 0 ? 1 : peak;
-  const barGap = width > 300 ? 12 : 8;
-  const barWidth = Math.max(
-    4,
-    (width - barGap * (data.length + 1)) / data.length,
-  );
-  const goalY = height - (goal ?? 0) / safePeak * height;
+  const count = data.length;
+  // Dynamic gap sizing based on the number of bars
+  const barGap = count > 14 ? 3 : count > 7 ? 6 : 10;
+  const totalGaps = barGap * (count + 1);
+  const barWidth = Math.max(3, (width - totalGaps) / Math.max(count, 1));
+  const goalY = height - ((goal ?? 0) / safePeak) * height;
 
   return (
     <View style={styles.wrapper} onLayout={onLayout}>
-      <Svg width={width} height={height}>
+      <Svg width={width} height={height + 22}>
         {goal !== undefined && goal > 0 && (
           <>
             <Line
@@ -61,6 +61,7 @@ export default function BarChart({
               y={goalY - 6}
               fill={colors.warning}
               fontSize={10}
+              fontWeight="600"
               textAnchor="end"
             >
               goal
@@ -71,20 +72,22 @@ export default function BarChart({
           const h = (d.value / safePeak) * height;
           const x = barGap + i * (barWidth + barGap);
           const isHighlight = i === highlightIndex;
+          const centerX = x + barWidth / 2;
+
           return (
             <React.Fragment key={i}>
               <Rect
                 x={x}
                 y={height - h}
                 width={barWidth}
-                height={Math.max(h, d.value > 0 ? 2 : 0)}
-                rx={radius.sm}
-                fill={isHighlight ? color : colors.primarySoft}
+                height={Math.max(h, d.value > 0 ? 3 : 2)}
+                rx={Math.min(radius.sm, barWidth / 2)}
+                fill={isHighlight ? color : d.value > 0 ? colors.primarySoft : '#E5EEF9'}
               />
               {d.value > 0 && formatValue ? (
                 <SvgText
-                  x={x + barWidth / 2}
-                  y={height - h - 6}
+                  x={centerX}
+                  y={Math.max(12, height - h - 6)}
                   fill={isHighlight ? colors.primary : colors.textSecondary}
                   fontSize={10}
                   fontWeight="600"
@@ -93,25 +96,22 @@ export default function BarChart({
                   {formatValue(d.value)}
                 </SvgText>
               ) : null}
+              {d.label ? (
+                <SvgText
+                  x={centerX}
+                  y={height + 16}
+                  fill={isHighlight ? colors.primary : colors.textSecondary}
+                  fontSize={count > 14 ? 9 : 11}
+                  fontWeight={isHighlight ? '700' : '500'}
+                  textAnchor="middle"
+                >
+                  {d.label}
+                </SvgText>
+              ) : null}
             </React.Fragment>
           );
         })}
       </Svg>
-      <View style={styles.labels}>
-        {data.map((d, i) => (
-          <Text
-            key={i}
-            style={[
-              styles.label,
-              i === highlightIndex && styles.labelHighlight,
-              { width: barWidth },
-            ]}
-            numberOfLines={1}
-          >
-            {d.label}
-          </Text>
-        ))}
-      </View>
     </View>
   );
 }
@@ -119,19 +119,6 @@ export default function BarChart({
 const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
-  },
-  labels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
-  label: {
-    fontSize: 11,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  labelHighlight: {
-    color: colors.primary,
-    fontWeight: '700',
+    alignItems: 'center',
   },
 });
